@@ -232,63 +232,8 @@ Call.cachedIceServers_ = null;
 // Keep track of when the request was made.
 Call.cachedIceConfigFetchTime_ = null;
 
-// Get a TURN config, either from settings or from network traversal server.
-Call.asyncCreateTurnConfig = function(onSuccess, onError) {
+Call.getIceServers = function(onSuccess, onError) {
   var settings = currentTest.settings;
-  if (typeof(settings.turnURI) === 'string' && settings.turnURI !== '') {
-    var iceServer = {
-      'username': settings.turnUsername || '',
-      'credential': settings.turnCredential || '',
-      'urls': settings.turnURI.split(',')
-    };
-    var config = {'iceServers': [iceServer]};
-    report.traceEventInstant('turn-config', config);
-    setTimeout(onSuccess.bind(null, config), 0);
-  } else {
-    Call.fetchTurnConfig_(function(response) {
-      var config = {'iceServers': response.iceServers};
-      report.traceEventInstant('turn-config', config);
-      onSuccess(config);
-    }, onError);
-  }
-};
-
-// Get a STUN config, either from settings or from network traversal server.
-Call.asyncCreateStunConfig = function(onSuccess, onError) {
-  var settings = currentTest.settings;
-  if (typeof(settings.stunURI) === 'string' && settings.stunURI !== '') {
-    var iceServer = {
-      'urls': settings.stunURI.split(',')
-    };
-    var config = {'iceServers': [iceServer]};
-    report.traceEventInstant('stun-config', config);
-    setTimeout(onSuccess.bind(null, config), 0);
-  } else {
-    Call.fetchTurnConfig_(function(response) {
-      var config = {'iceServers': response.iceServers.urls};
-      report.traceEventInstant('stun-config', config);
-      onSuccess(config);
-    }, onError);
-  }
-};
-
-// Ask network traversal API to give us TURN server credentials and URLs.
-Call.fetchTurnConfig_ = function(onSuccess, onError) {
-  // Check if credentials exist or have expired (and subtract testRuntTIme so
-  // that the test can finish if near the end of the lifetime duration).
-  // lifetimeDuration is in seconds.
-  var testRunTime = 240; // Time in seconds to allow a test run to complete.
-  if (Call.cachedIceServers_) {
-    var isCachedIceConfigExpired =
-      ((Date.now() - Call.cachedIceConfigFetchTime_) / 1000 >
-      parseInt(Call.cachedIceServers_.lifetimeDuration) - testRunTime);
-    if (!isCachedIceConfigExpired) {
-      report.traceEventInstant('fetch-ice-config', 'Using cached credentials.');
-      onSuccess(Call.getCachedIceCredentials_());
-      return;
-    }
-  }
-
   var xhr = new XMLHttpRequest();
   function onResult() {
     if (xhr.readyState !== 4) {
@@ -296,12 +241,12 @@ Call.fetchTurnConfig_ = function(onSuccess, onError) {
     }
 
     if (xhr.status !== 200) {
-      onError('TURN request failed');
+      onError('Xirsys _turn request failed');
       return;
     }
 
     var response = JSON.parse(xhr.responseText);
-    Call.cachedIceServers_ = response;
+    Call.cachedIceServers_ = response.v.iceServers;
     Call.getCachedIceCredentials_ = function() {
       // Make a new object due to tests modifying the original response object.
       return JSON.parse(JSON.stringify(Call.cachedIceServers_));
@@ -312,8 +257,66 @@ Call.fetchTurnConfig_ = function(onSuccess, onError) {
   }
 
   xhr.onreadystatechange = onResult;
-  // API_KEY and TURN_URL is replaced with API_KEY environment variable via
-  // Gruntfile.js during build time by uglifyJS.
-  xhr.open('POST', TURN_URL + API_KEY, true);
+  xhr.open('PUT', "https://global.xirsys.net/_turn/" + settings.xirsysChannel, false);
+  xhr.setRequestHeader("Authorization", "Basic " + btoa(settings.xirsysIdent + ":" + settings.xirsysSecret));
   xhr.send();
 };
+
+// Get a TURN config, either from settings or from network traversal server.
+Call.asyncCreateTurnConfig = function(onSuccess, onError) {
+  var settings = currentTest.settings;
+  if (typeof(settings.xirsysIdent) === 'string' 
+      && settings.xirsysIdent !== ''
+      && typeof(settings.xirsysSecret) === 'string'
+      && settings.xirsysSecret !== '') {
+    this.getIceServers(function(ice) {
+      var username, credential, urls = [];
+      for (i=0; i<ice.length; i++) {
+        if (ice[i].url.startsWith("turn")) {
+          if (!username) {
+            username = ice[i].username;
+            credential = ice[i].credential;
+          }
+          urls.push(ice[i].url);
+        }
+      }
+      var iceServers = {
+        username: username,
+        credential: credential,
+        urls: urls
+      };
+      var config = {'iceServers': [iceServers]};
+      report.traceEventInstant('turn-config', config);
+      setTimeout(onSuccess.bind(null, config), 0);      
+    }, onError);
+  } else {
+    onError("Xirsys connection details not provided.");
+  }
+};
+
+// Get a STUN config, either from settings or from network traversal server.
+Call.asyncCreateStunConfig = function(onSuccess, onError) {
+  var settings = currentTest.settings;
+  if (typeof(settings.xirsysIdent) === 'string' 
+      && settings.xirsysIdent !== ''
+      && typeof(settings.xirsysSecret) === 'string'
+      && settings.xirsysSecret !== '') {
+    this.getIceServers(function(ice) {
+      var urls = [];
+      for (i=0; i<ice.length; i++) {
+        if (ice[i].url.startsWith("stun")) {
+          urls.push(ice[i].url);
+        }
+      }
+      var iceServers = {
+        urls: urls
+      };
+      var config = {'iceServers': [iceServers]};
+      report.traceEventInstant('stun-config', config);
+      setTimeout(onSuccess.bind(null, config), 0);      
+    }, onError);
+  } else {
+    onError("Xirsys connection details not provided.");
+  }
+};
+

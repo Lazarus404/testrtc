@@ -18,19 +18,19 @@
 <dom-module id="testrtc-main">
   <style>
     .titlebar {
-      --paper-toolbar-background: #4F7DC9;
+      --paper-toolbar-background: #454547;
       --paper-toolbar-color: #FFF;
       font-size: 18px;
       font-weight: 500;
       transition: height .2s;
       font-family: 'Roboto', sans-serif;
-      max-width: 40em;
-      margin: 1em auto 1em auto;
+      width: 100%;
+      margin: 0 auto 1em auto;
     }
 
     #startButton {
       line-height: 3em;
-      background-color: #9E9;
+      background-color: #7cc142;
       color: #000;
     }
 
@@ -67,15 +67,13 @@
       </div>
 
       <div class="section">
-        <h3>TURN</h3>
-        <paper-input label="URI" always-float-label placeholder="E.g.: turn:myserver.com:3478" value="{{settings.turnURI}}"></paper-input>
+        <h3>Xirsys Details</h3>
+        <!-- <paper-input label="URI" always-float-label placeholder="E.g.: turn:myserver.com:3478" value="{{settings.turnURI}}"></paper-input>
         <paper-input label="Username" always-float-label value="{{settings.turnUsername}}"></paper-input>
-        <paper-input label="Credential" always-float-label value="{{settings.turnCredential}}"></paper-input>
-      </div>
-
-      <div class="section">
-        <h3>STUN</h3>
-        <paper-input label="URI" always-float-label placeholder="E.g.: stun:myserver.com:3478" value="{{settings.stunURI}}"></paper-input>
+        <paper-input label="Credential" always-float-label value="{{settings.turnCredential}}"></paper-input> -->
+        <paper-input label="Ident" always-float-label value="{{settings.xirsysIdent}}"></paper-input>
+        <paper-input label="Secret" always-float-label value="{{settings.xirsysSecret}}"></paper-input>
+        <paper-input label="Channel" always-float-label value="{{settings.xirsysChannel}}"></paper-input>
       </div>
 
       <div class="section">
